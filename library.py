@@ -10,6 +10,13 @@ from math import floor
 
 
 # --------------------------------------------------------------
+# Global values
+# ---------------------------------------------------------------
+
+# Reasonable maximum integer value
+MAX_COST = 2**30
+
+# --------------------------------------------------------------
 # Methods for creating genomes and populations
 # ---------------------------------------------------------------
 
@@ -472,3 +479,32 @@ def count_total_weight(data):
     for i in range(0, len(data)):
         weight += data[i][1]
     return weight
+
+#--------------------------------------------------------------------
+# TESTING
+
+# Test of the fitness function with optimal values
+def test_optimal():
+    all_nodes = pd.read_csv("data.csv").values
+    
+    optima = [3.1, 1.5, 2.2, 0.1, 6.6, 3.3, 0.2, 3.4, 8.4, 6.7,
+              1.2, 6.8, 7.5, 1.7, 1.3, 6.3, 1.6, 5.7, 7.3, 0.5,
+              2.5, 7.2, 5.1, 5.3, 4.1, 0.7, 7.4, 7.7, 4.3, 7.1,
+              0.4, 6.1, 2.4, 2.3, 8.5, 1.1, 2.1, 6.2, 8.2, 6.4,
+              4.2, 0.3, 8.6, 5.4, 3.2, 0.6, 8.1, 5.6, 8.3, 5.5,
+              1.4, 5.2, 6.5, 7.6]
+
+    #Route #1: 4 7 42 31 20 46 26
+    #Route #2: 36 11 15 51 2 17 14
+    #Route #3: 37 3 34 33 21
+    #Route #4: 1 45 6 8
+    #Route #5: 25 41 29
+    #Route #6: 23 52 24 44 50 48 18
+    #Route #7: 32 38 16 40 53 5 10 12
+    #Route #8: 30 22 19 27 13 54 28
+    #Route #9: 47 39 49 9 35 43
+    print(optima)
+    optima_result = fitness_function(all_nodes, 9, optima)
+    print(optima_result)
+
+# ----------------------------------------------------
