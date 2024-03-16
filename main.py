@@ -30,18 +30,24 @@ import sys
 # PARAM new_blood_rate: How many percent of the worst performing genomes to swap out for newly
 #       generated genomes in case a population doesn't improve after one generation, range [0,1]
 # PARAM n-best: How many of the elites to keep
-# PARAM mutation_swap ("mutation_swap_nodes" or "mtiation_swap edges")
-# PARAM crossover ("crossover_1p" or "crossover_2p")
-def ga( data,
-        n_generations,
-        population_size,
-        crossover_rate,
-        mutation_rate,
-        sel_rate,
-        which_mutation,
-        which_selection,
-        new_blood_rate,
-        n_best ):
+# PARAM mutation_swap (mutation swap function: "mutation_swap_nodes" or "mtiation_swap edges")
+# PARAM crossover (crossover function: "crossover_1p" or "crossover_2p")
+def ga(args):
+    # arguments
+    (data,
+     n_generations,
+     population_size,
+     crossover_rate,
+     mutation_rate,
+     sel_rate,
+     which_mutation,
+     which_selection,
+     new_blood_rate,
+     n_best,
+     mutation_swap,
+     crossover) = args
+
+    # init
     n_vehicles = 9
     capacity   = 100
     give_up_n = 7 # How many tries to improve each child
@@ -53,6 +59,7 @@ def ga( data,
     cur_population = create_population(data, population_size, n_vehicles, capacity)
 
     for i in range(0, n_generations):
+        show_progress(i, n_generations)
         # Get the best genomes at the top
         cur_population = sort_population(data, cur_population, n_vehicles)
         # Sort the population to get the most fit one first
@@ -114,27 +121,38 @@ def ga( data,
     print(f"CPU USAGE: {psutil.cpu_percent()}%")
     return best
 
+# Show the progress of each round to the user
+def show_progress(i, n_generations):
+    ratio = round((i / n_generations) * 100)
+    if ratio == 25:
+        print("Progress: 25% complete")
+    if ratio == 50:
+        print("Progress: 50% complete")
+    if ratio == 75:
+        print("Progress: 75% complete")
+
+
 # --------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------
 
-# Multi-threaded runtime of the algorithm
+# Multi-threaded runtime of the algorithm where each thread has slightly modified ratios
 def run_multithreaded(file_name, n_rounds, n_threads, args):
     
     threads = []
     for i in range(0,n_threads):
         # Local copy of data for each thread
         all_nodes = pd.read_csv(file_name).values
-        input_vals =  [all_nodes] + args
 
         # Execute thread
-        x = threading.Thread(target=execution, args=args)
+        print(f'Thread {i+1} with args: {args}')
+        x = threading.Thread(target=execution, args=[all_nodes, n_rounds, args])
         x.start()
         threads.append(x)
         
         # Slightly modify ratios in args for next thread
         args = modify_args(args)
-        input_vals =  [all_nodes] + args
+                             
     # Joining threads
     for i in range(0,n_threads):
         threads[i].join()
@@ -143,12 +161,18 @@ def run_multithreaded(file_name, n_rounds, n_threads, args):
 # Modifies all ratio values slightly at random for each thread
 def modify_args(args):
     new_args = [x for x in args]
-    new_args[2] = clamp(new_args[2] - 0.1 + random.random * 0.2)
-    new_args[3] = clamp(new_args[2] - 0.1 + random.random * 0.2)
-    new_args[4] = clamp(new_args[2] - 0.1 + random.random * 0.2)
-    new_args[5] = clamp(new_args[2] - 0.1 + random.random * 0.2)
-    new_args[6] = clamp(new_args[2] - 0.1 + random.random * 0.2)
-    new_args[7] = clamp(new_args[2] - 0.1 + random.random * 0.2)
+    new_args[2] = clamp(new_args[2] - 0.1 + random.random() * 0.2)
+    new_args[2] = round(new_args[2], 5)
+    new_args[3] = clamp(new_args[3] - 0.1 + random.random() * 0.2)
+    new_args[3] = round(new_args[3], 5)
+    new_args[4] = clamp(new_args[4] - 0.1 + random.random() * 0.2)
+    new_args[4] = round(new_args[4], 5)
+    new_args[5] = clamp(new_args[5] - 0.1 + random.random() * 0.2)
+    new_args[5] = round(new_args[5], 5)
+    new_args[6] = clamp(new_args[6] - 0.1 + random.random() * 0.2)
+    new_args[6] = round(new_args[6], 5)
+    new_args[7] = clamp(new_args[7] - 0.1 + random.random() * 0.2)
+    new_args[7] = round(new_args[7], 5)
     return new_args
 
 
@@ -171,16 +195,28 @@ def execution(all_nodes, n_rounds, args):
     
     results = []
     for i in range(0,n_rounds):
+        print(f'Execute round {i+1}') 
         result = ga(input_vals)
         results.append(result)
 
         
 def main():
-    file_name = sys.argv[1]
-    n_rounds  = sys.argv[2]
-    n_threads = sys.argv[3]
-    all_nodes = pd.read_csv(file_name).values
+    file_name = ""
+    n_rounds = 0
+    n_threads = 0
 
+    try:
+        file_name = sys.argv[1]
+        n_rounds  = int(sys.argv[2])
+        n_threads = int(sys.argv[3])
+    except:
+        raise Exception("Incorrect parameters, run with: main.py file_name n_rounds n_threads")
+
+    if n_rounds <= 0 or n_threads <= 0:
+        raise Exception("n_rounds and n_rounds must be 1 or larger")
+        
+    all_nodes = pd.read_csv(file_name).values
+        
     # NOTE: Values to experiment and play around with: 
     # - n_generations: How many generations to go trough before returning the resut
     # - population_size: The n om genomes
@@ -195,14 +231,13 @@ def main():
     # - n-best: How many of the elites to keep
     # - mutation swap function ("mutation_swap_nodes" or "mtiation_swap edges")
     # - crossover function ("crossover_1p" or "crossover_2p")
-    args = [1500, 110, 0.55, 0.40, 0.90, 0.5, 0.96, 0.45, 4, mutation_swap_nodes, crossover_1p]
+    args = [100, 110, 0.55, 0.40, 0.90, 0.5, 0.96, 0.45, 4, mutation_swap_nodes, crossover_1p]
     
     if n_threads == 1:
         execution(all_nodes, n_rounds, args)
     else:
         run_multithreaded(file_name, n_rounds, n_threads, args)
 
-    
 
 if __name__ == "__main__":
     main()
